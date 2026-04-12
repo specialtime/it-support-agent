@@ -15,10 +15,8 @@ def get_llm():
             model="local-model",
             temperature=0.1,
             max_tokens=1500,
-            model_kwargs={
-                "frequency_penalty": 1.0,
-                "presence_penalty": 0.5
-            }
+            frequency_penalty=1.0,
+            presence_penalty=0.5
         )
     elif env == "groq":
         return ChatGroq(
