@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+*.egg-info/
+.env
+data/
+
+# Desarrollo (IA Agent Metadata)
+.agents/
+.agy/
+.specify/
+AGY.md
+scratch/
+agent/prompts/
+plan-agente-soporte-it-v4.md
