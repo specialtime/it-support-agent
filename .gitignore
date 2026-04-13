@@ -10,10 +10,12 @@ data/chroma_db/
 
 
 # Desarrollo (IA Agent Metadata)
+.agent/
 .agents/
 .agy/
 .specify/
 AGY.md
+
 scratch/
 agent/prompts/
 plan-agente-soporte-it-v4.md
