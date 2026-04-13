@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soporte IT Agente</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="src/css/index.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar / Settings -->
+        <aside id="sidebar" class="glass-panel">
+            <div class="sidebar-header">
+                <h2>Ajustes Premium</h2>
+            </div>
+            <div class="sidebar-content">
+                <div class="form-group">
+                    <label for="role-select">Rol de Usuario</label>
+                    <select id="role-select" class="premium-select">
+                        <option value="user">User</option>
+                        <option value="helpdesk">Helpdesk</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                
+                <div class="control-toggle mt-16">
+                    <label class="toggle">
+                        <input type="checkbox" id="theme-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="toggle-label">Efectos Visuales Avanzados</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main id="chat-container">
+            <header class="chat-header">
+                <h1>IT Support Chatbot</h1>
+                <p>Asistente virtual para consultas y solicitudes de soporte IT.</p>
+            </header>
+            
+            <div id="messages-area" class="messages-area">
+                <!-- Messages will be injected here dynamically -->
+            </div>
+            
+            <div class="chat-input-area">
+                <form id="chat-form">
+                    <input type="text" id="chat-input" placeholder="Escribe tu consulta aquí..." autocomplete="off">
+                    <button type="submit" id="send-button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Main Application Script -->
+    <script src="src/js/api.js"></script>
+    <script src="src/js/main.js"></script>
+</body>
+</html>

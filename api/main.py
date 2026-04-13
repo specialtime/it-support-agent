@@ -1,10 +1,19 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from .models import AskRequest, AskResponse
 from langchain_core.messages import HumanMessage
 from agent.graph import graph
 from .bot_handler import router as bot_router
 
 app = FastAPI(title="Agente de Soporte IT API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(bot_router)
 

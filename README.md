@@ -1,13 +1,13 @@
 # IT Support Agent (AI-Powered)
 
-Este es un agente de soporte IT inteligente construido con **LangGraph**, **FastAPI** y **Streamlit**. Utiliza una arquitectura de RAG (Retrieval-Augmented Generation) multi-fuente en paralelo para responder consultas técnicas y ejecutar acciones administrativas.
+Este es un agente de soporte IT inteligente construido con **LangGraph**, **FastAPI** y una interfaz moderna en **Vanilla JS**. Utiliza una arquitectura de RAG (Retrieval-Augmented Generation) multi-fuente en paralelo para responder consultas técnicas y ejecutar acciones administrativas.
 
 ## 🚀 Características Principales
 
 - **Búsqueda Multi-Fuente en Paralelo**: Consulta simultáneamente SharePoint (knowledge base), Base de Datos SQL de Tickets y conexión a la API de Jira Cloud.
 - **Clasificación Inteligente de Intenciones**: Identifica si el usuario necesita ayuda, buscar un ticket específico o realizar una acción.
 - **Acciones Administrativas Seguras**: Soporta reset de contraseñas y procesamiento de archivos, protegidos por control de acceso basado en roles (RBAC).
-- **Interfaz de Chat Moderna**: Construida con Streamlit para una experiencia de usuario fluida.
+- **Interfaz de Chat Moderna**: Construida con Vanilla HTML, CSS y JS con un diseño premium y glassmorphism.
 - **Trazabilidad con LangSmith**: Monitoreo completo de cada paso de la lógica del agente.
 
 ## 🛠️ Stack Tecnológico
@@ -15,7 +15,7 @@ Este es un agente de soporte IT inteligente construido con **LangGraph**, **Fast
 - **Orquestación**: LangGraph 0.3+
 - **Framework de IA**: LangChain 0.2+
 - **Backend API**: FastAPI
-- **Frontend**: Streamlit
+- **Frontend**: Vanilla HTML/JS (servido en puerto 8080)
 - **Modelos**: Compatible con OpenAI, Groq y modelos locales (via LM Studio)
 - **Base de Datos**: SQLite
 
@@ -55,7 +55,7 @@ Este es un agente de soporte IT inteligente construido con **LangGraph**, **Fast
    ```
    O manualmente en dos terminales:
    - **Backend**: `uvicorn api.main:app --host 0.0.0.0 --port 8000`
-   - **Frontend**: `streamlit run ui/app.py`
+   - **Frontend**: `python -m http.server 8080 --directory frontend`
 
 ## 🧪 Testing
 
