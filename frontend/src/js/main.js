@@ -1,9 +1,16 @@
 /**
  * UI State Management
  */
+const ROLE_LABELS = {
+    user: "Usuario",
+    helpdesk: "Mesa de ayuda",
+    admin: "Administrador"
+};
+
 const UIState = {
     sessionId: crypto.randomUUID(),
     currentUserRole: 'user',
+    theme: 'light',
     messages: []
 };
 
@@ -13,7 +20,17 @@ const UIState = {
  */
 function setRole(role) {
     UIState.currentUserRole = role;
+    syncRoleChip();
     console.log(`Role updated to: ${role}`);
+}
+
+/**
+ * Get a human-readable label for a role
+ * @param {string} role
+ * @returns {string}
+ */
+function getRoleLabel(role) {
+    return ROLE_LABELS[role] || role;
 }
 
 /**
@@ -36,7 +53,8 @@ function addMessageToState(role, content, actionExecuted = null) {
         id: generateMessageId(),
         role: role,
         content: content,
-        action_executed: actionExecuted
+        action_executed: actionExecuted,
+        createdAt: new Date().toISOString()
     };
     UIState.messages.push(msg);
     return msg;
@@ -44,6 +62,9 @@ function addMessageToState(role, content, actionExecuted = null) {
 
 // Event Listeners for initialization
 document.addEventListener("DOMContentLoaded", () => {
+    initSidebarCollapse();
+    initThemeSelector();
+
     // Initial role setup
     const roleSelect = document.getElementById("role-select");
     if (roleSelect) {
@@ -57,12 +78,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const themeToggle = document.getElementById("theme-toggle");
     if (themeToggle) {
+        document.body.classList.toggle('disable-animations', !themeToggle.checked);
         themeToggle.addEventListener("change", (e) => {
-            if (e.target.checked) {
-                document.body.classList.remove('disable-animations');
-            } else {
-                document.body.classList.add('disable-animations');
-            }
+            document.body.classList.toggle('disable-animations', !e.target.checked);
+            syncVisualModeChip();
         });
     }
 
@@ -70,7 +89,108 @@ document.addEventListener("DOMContentLoaded", () => {
     if (chatForm) {
         chatForm.addEventListener("submit", handleChatSubmit);
     }
+
+    document.addEventListener("click", (event) => {
+        const promptButton = event.target.closest("[data-prompt]");
+        if (!promptButton) return;
+
+        const inputField = document.getElementById("chat-input");
+        if (!inputField) return;
+
+        inputField.value = promptButton.dataset.prompt || "";
+        inputField.focus();
+        if (typeof inputField.setSelectionRange === "function") {
+            const endPosition = inputField.value.length;
+            inputField.setSelectionRange(endPosition, endPosition);
+        }
+    });
+
+    syncChromeState();
+    renderMessages();
 });
+
+/**
+ * Initialize theme selector and restore persisted preference
+ */
+function initThemeSelector() {
+    const themeSelect = document.getElementById("theme-select");
+    if (!themeSelect) return;
+
+    const savedTheme = localStorage.getItem("ui-theme");
+    const initialTheme = savedTheme === "dark" ? "dark" : "light";
+
+    applyTheme(initialTheme);
+    themeSelect.value = initialTheme;
+
+    themeSelect.addEventListener("change", (e) => {
+        applyTheme(e.target.value);
+    });
+}
+
+/**
+ * Apply selected theme to the document and persist preference
+ * @param {string} theme
+ */
+function applyTheme(theme) {
+    const resolvedTheme = theme === "dark" ? "dark" : "light";
+    UIState.theme = resolvedTheme;
+    document.body.setAttribute("data-theme", resolvedTheme);
+    localStorage.setItem("ui-theme", resolvedTheme);
+}
+
+/**
+ * Enable collapsing sidebar in desktop layouts
+ */
+function initSidebarCollapse() {
+    const app = document.getElementById("app");
+    const collapseButton = document.getElementById("sidebar-collapse-toggle");
+    if (!app || !collapseButton) return;
+
+    const setCollapsedState = (isCollapsed) => {
+        app.classList.toggle("sidebar-collapsed", isCollapsed);
+        collapseButton.setAttribute("aria-expanded", String(!isCollapsed));
+        collapseButton.setAttribute("aria-label", isCollapsed ? "Expandir barra lateral" : "Colapsar barra lateral");
+    };
+
+    collapseButton.addEventListener("click", () => {
+        const isCollapsed = app.classList.toggle("sidebar-collapsed");
+        collapseButton.setAttribute("aria-expanded", String(!isCollapsed));
+        collapseButton.setAttribute("aria-label", isCollapsed ? "Expandir barra lateral" : "Colapsar barra lateral");
+    });
+
+    setCollapsedState(false);
+}
+
+/**
+ * Synchronize header chips with current UI state
+ */
+function syncChromeState() {
+    syncRoleChip();
+    syncVisualModeChip();
+}
+
+/**
+ * Update the role chip in the header
+ */
+function syncRoleChip() {
+    const roleChip = document.getElementById("current-role-pill");
+    if (roleChip) {
+        roleChip.textContent = `Rol: ${getRoleLabel(UIState.currentUserRole)}`;
+    }
+}
+
+/**
+ * Update the visual mode chip in the header
+ */
+function syncVisualModeChip() {
+    const visualChip = document.getElementById("visual-mode-pill");
+    const animationsDisabled = document.body.classList.contains('disable-animations');
+
+    if (visualChip) {
+        visualChip.textContent = animationsDisabled ? "Animaciones pausadas" : "Animación activa";
+        visualChip.classList.toggle("status-pill--muted", animationsDisabled);
+    }
+}
 
 /**
  * Handle form submission
@@ -112,6 +232,8 @@ async function handleChatSubmit(e) {
         addMessageToState("assistant", `Error: ${error.message}`);
         renderMessages();
     }
+
+    inputField.focus();
 }
 
 /**
@@ -122,22 +244,84 @@ function renderMessages() {
     if (!messagesArea) return;
     
     messagesArea.innerHTML = "";
+    messagesArea.classList.toggle("messages-area--empty", UIState.messages.length === 0);
+
+    if (UIState.messages.length === 0) {
+        renderEmptyState(messagesArea);
+        return;
+    }
     
     UIState.messages.forEach(msg => {
-        const div = document.createElement("div");
-        div.className = `message ${msg.role}`;
-        
-        let contentHtml = escapeHtml(msg.content.trim()).replace(/\n/g, '<br>');
-        
+        const row = document.createElement("article");
+        row.className = `message message-row ${msg.role}`;
+
+        const avatar = document.createElement("div");
+        avatar.className = `message-avatar ${msg.role}`;
+        avatar.textContent = msg.role === "user" ? "TU" : "AI";
+
+        const bubble = document.createElement("div");
+        bubble.className = `message-bubble ${msg.role}`;
+
+        const meta = document.createElement("div");
+        meta.className = "message-meta";
+
+        const roleLabel = document.createElement("span");
+        roleLabel.className = "message-role";
+        roleLabel.textContent = msg.role === "user" ? "Tú" : "Asistente";
+
+        const timeLabel = document.createElement("time");
+        timeLabel.className = "message-time";
+        timeLabel.dateTime = msg.createdAt;
+        timeLabel.textContent = formatMessageTime(msg.createdAt);
+
+        meta.append(roleLabel, timeLabel);
+
+        const content = document.createElement("div");
+        content.className = "message-content";
+        content.textContent = msg.content.trim();
+
+        bubble.append(meta, content);
+
         if (msg.action_executed) {
-            contentHtml += `<br><span class="action-badge">Action: ${escapeHtml(msg.action_executed)}</span>`;
+            const footer = document.createElement("div");
+            footer.className = "message-footer";
+
+            const actionBadge = document.createElement("span");
+            actionBadge.className = "action-badge";
+            actionBadge.textContent = `Acción: ${msg.action_executed}`;
+
+            footer.append(actionBadge);
+            bubble.append(footer);
         }
-        
-        div.innerHTML = contentHtml;
-        messagesArea.appendChild(div);
+
+        row.append(avatar, bubble);
+        messagesArea.appendChild(row);
     });
     
     scrollToBottom();
+}
+
+/**
+ * Render the initial empty state with quick prompts
+ * @param {HTMLElement} messagesArea
+ */
+function renderEmptyState(messagesArea) {
+    const welcomeState = document.createElement("section");
+    welcomeState.className = "welcome-state";
+    welcomeState.innerHTML = `
+        <div class="welcome-state__icon" aria-hidden="true">✦</div>
+        <p class="welcome-state__eyebrow">Inicio rápido</p>
+        <h2>¿Qué necesitás resolver hoy?</h2>
+        <p class="welcome-state__copy">Elegí un acceso rápido o escribí tu consulta. El panel lateral ajusta el contexto de respuesta según el rol.</p>
+        <div class="prompt-grid">
+            <button type="button" class="prompt-chip" data-prompt="No puedo iniciar sesión en Jira.">No puedo iniciar sesión</button>
+            <button type="button" class="prompt-chip" data-prompt="Necesito buscar un ticket por número.">Buscar un ticket</button>
+            <button type="button" class="prompt-chip" data-prompt="Necesito documentación sobre un proceso de soporte.">Ver documentación</button>
+            <button type="button" class="prompt-chip" data-prompt="Restablecer contraseña de un usuario.">Restablecer contraseña</button>
+        </div>
+    `;
+
+    messagesArea.appendChild(welcomeState);
 }
 
 /**
@@ -149,14 +333,20 @@ function showTypingIndicator() {
     
     removeTypingIndicator(); // Ensure no duplicates
     
-    const div = document.createElement("div");
+    const div = document.createElement("article");
     div.className = "typing-indicator";
     div.id = "typing-indicator";
     
     div.innerHTML = `
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
+        <div class="message-avatar assistant">AI</div>
+        <div class="typing-bubble">
+            <span class="typing-label">Generando respuesta</span>
+            <div class="typing-dots">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
     `;
     
     messagesArea.appendChild(div);
@@ -184,13 +374,14 @@ function scrollToBottom() {
 }
 
 /**
- * Simple HTML escape
+ * Format a message timestamp for display
+ * @param {string} createdAt
+ * @returns {string}
  */
-function escapeHtml(unsafe) {
-    return unsafe
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
+function formatMessageTime(createdAt) {
+    const date = new Date(createdAt);
+    return date.toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit"
+    });
 }
