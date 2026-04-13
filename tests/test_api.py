@@ -12,8 +12,12 @@ class TestApiEndpoints:
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
         
-    def test_ask_endpoint_routing(self):
+    from unittest.mock import patch
+    
+    @patch("agent.nodes.search")
+    def test_ask_endpoint_routing(self, mock_search):
         # Arrange
+        mock_search.return_value = [{"id": "mock", "content": "Respuesta desde mock", "source": "sharepoint", "source_type": "sharepoint", "title": "Mock doc", "url": "http://mock"}]
         payload = {
             "question": "Como resuelvo el error 403?",
             "role": "helpdesk"
@@ -28,11 +32,6 @@ class TestApiEndpoints:
         assert "answer" in data
         assert "status" in data
         assert data["status"] == "success"
-        
-        # NOTE: At this stage (T011), since RAG graph is not fully implemented, 
-        # the answer will be the stub text "Funcionalidad RAG en progreso."
-        # Once T016 and T017 are done, this test might need adjusting or it 
-        # implicitly serves as a routing structural test.
 
     def test_jira_cloud_api_contract(self):
         # T018: Contract test for Jira cloud APIs. 

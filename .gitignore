@@ -6,6 +6,8 @@ dist/
 *.egg-info/
 .env
 data/
+data/chroma_db/
+
 
 # Desarrollo (IA Agent Metadata)
 .agents/

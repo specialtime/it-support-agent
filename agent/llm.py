@@ -1,6 +1,9 @@
 import os
+from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
+
+load_dotenv()
 
 def get_llm():
     """
@@ -25,7 +28,12 @@ def get_llm():
             temperature=0
         )
     elif env == "azure":
-        # To be implemented for production
-        pass
+        from langchain_openai import AzureChatOpenAI
+        return AzureChatOpenAI(
+            azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_key=os.getenv("AZURE_OPENAI_API_KEY")
+        )
     
     raise ValueError(f"Unknown LLM_ENV: {env}")

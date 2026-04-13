@@ -1,70 +1,51 @@
 import os
-import json
 from typing import List, Dict, Any
-
-_doc_cache = {}
-
-def clear_cache():
-    """Limpia el caché de documentos para forzar recarga."""
-    global _doc_cache
-    _doc_cache = {}
-
-def _init_cache():
-    if not _doc_cache:
-        # Avoid circular imports or issues by lazy loading
-        from etl.pipeline_sharepoint import load_sharepoint_documents
-        from etl.pipeline_onprem import load_onprem_tickets
-        
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
-        sp_path = os.path.join(base_dir, "data", "mock_sharepoint")
-        sp_docs = load_sharepoint_documents(sp_path) if os.path.exists(sp_path) else []
-        
-        db_path = os.path.join(base_dir, "data", "jira_mock.db")
-        onprem_docs = load_onprem_tickets(db_path) if os.path.exists(db_path) else []
-        
-        cloud_docs = []
-        cloud_path = os.path.join(base_dir, "data", "jira_cloud_mock.json")
-        if os.path.exists(cloud_path):
-            try:
-                with open(cloud_path, "r", encoding="utf-8") as f:
-                    cloud_data = json.load(f)
-                    for issue in cloud_data.get("issues", []):
-                        cloud_docs.append({
-                            "id": issue.get("key"),
-                            "source_id": issue.get("key"),
-                            "source": "jira_cloud",
-                            "title": issue.get("summary", ""),
-                            "content": json.dumps(issue),
-                            "url": f"cloud://{issue.get('key')}"
-                        })
-            except Exception:
-                pass
-                
-        _doc_cache["sharepoint"] = sp_docs
-        _doc_cache["jira_onprem"] = onprem_docs
-        _doc_cache["jira_cloud"] = cloud_docs
+import warnings
 
 def _search_local(query: str, source_type: str, top: int = 4) -> List[Dict[str, Any]]:
-    _init_cache()
-    docs = _doc_cache.get(source_type, []) 
+    """Búsqueda semántica usando ChromaDB local."""
+    from etl.embedding import get_chroma_client, get_embedding_fn
     
-    import string
-    stop_words = {"para", "como", "cómo", "paso", "las", "los", "qué", "que", "una", "por", "con", "dar", "del", "resumime", "en"}
+    collection_mapping = {
+        "sharepoint": "sharepoint",
+        "jira_onprem": "jira_onprem",
+        "jira_cloud": "jira_cloud"
+    }
     
-    # Strip punctuation and filter
-    query_clean = query.translate(str.maketrans("", "", string.punctuation))
-    keywords = [kw.lower() for kw in query_clean.split() if len(kw) > 3 and kw.lower() not in stop_words]
+    col_name = collection_mapping.get(source_type)
+    if not col_name:
+        warnings.warn(f"Colección desconocida para source_type: {source_type}")
+        return []
+        
+    client = get_chroma_client()
+    try:
+        ef = get_embedding_fn()
+        collection = client.get_collection(name=col_name, embedding_function=ef)
+    except Exception as e:
+        warnings.warn(f"No se pudo acceder a la colección {col_name}: {e}")
+        return []
+        
+    results = collection.query(
+        query_texts=[query],
+        n_results=top
+    )
     
-    scored = []
-    for doc in docs:
-        text = str(doc.get("content", "") + " " + doc.get("title", "")).lower()
-        score = sum(text.count(kw) for kw in keywords)
-        if score > 0:
-            scored.append((score, doc))
-            
-    scored.sort(key=lambda x: x[0], reverse=True)
-    return [d for s, d in scored][:top]
+    mapped_results = []
+    if not results or not results.get("ids") or not results["ids"][0]:
+        return []
+        
+    for i in range(len(results["ids"][0])):
+        metadatas = results["metadatas"][0][i]
+        mapped_results.append({
+            "id": results["ids"][0][i],
+            "content": results["documents"][0][i],
+            "source": metadatas.get("source", ""),
+            "source_type": metadatas.get("source_type", source_type),
+            "title": metadatas.get("title", ""),
+            "url": metadatas.get("url", "")
+        })
+        
+    return mapped_results
 
 def _search_azure(query: str, source_type: str, top: int = 4) -> List[Dict[str, Any]]:
     # Placeholder for Azure AI search implementation in Phase 3
