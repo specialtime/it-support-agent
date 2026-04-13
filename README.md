@@ -22,8 +22,8 @@ Este es un agente de soporte IT inteligente construido con **LangGraph**, **Fast
 ## 📋 Requisitos Previos
 
 1. **Python 3.10+**
-2. **LM Studio** (opcional, para ejecución local):
-   - Servidor levantado en `http://localhost:1234/v1`.
+2. **LM Studio** (requerido para embeddings locales):
+   - Servidor levantado en `http://localhost:1234/v1` con el modelo `nomic-embed-text-v1.5` cargado.
 3. **Claves de API** (Groq o OpenAI si no usas local).
 
 ## 💻 Instalación y Uso
@@ -42,7 +42,13 @@ Este es un agente de soporte IT inteligente construido con **LangGraph**, **Fast
 3. **Configurar el entorno**:
    - Copia `.env.example` a `.env` y completa tus credenciales.
 
-4. **Ejecutar la aplicación**:
+4. **Ingestar datos en la BD Vectorial**:
+   Garantiza que el servidor de LM Studio está en ejecución y lanza:
+   ```bash
+   python -m etl.ingest
+   ```
+
+5. **Ejecutar la aplicación**:
    Puedes usar el script automatizado (Windows):
    ```powershell
    .\run_app.ps1
