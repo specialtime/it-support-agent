@@ -8,5 +8,9 @@ Start-Process -FilePath $pythonPath -ArgumentList "-m uvicorn api.main:app --hos
 Write-Host "Pausando 3 segundos para que levante el backend..."
 Start-Sleep -Seconds 3
 
-Write-Host "Iniciando Streamlit..."
-& $pythonPath -m streamlit run ui/app.py
+Write-Host "Servicios disponibles en:"
+Write-Host " - Backend: http://localhost:8000"
+Write-Host " - Frontend Moderno: http://localhost:8080"
+Write-Host ""
+Write-Host "Iniciando Frontend Moderno (Presiona Ctrl+C para detener)..."
+& $pythonPath -m http.server 8080 --directory frontend
