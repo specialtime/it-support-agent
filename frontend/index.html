@@ -1,109 +1,155 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Soporte IT Agente</title>
-    <!-- Google Fonts: Inter + Space Grotesk -->
+    <meta name="description" content="IT Command Center — Plataforma centralizada de soporte técnico, gestión de incidentes y resolución inteligente de tickets.">
+    <title>Saber es poder — Soporte Empresarial</title>
+    <!-- Google Fonts: Quicksand -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Main CSS -->
     <link rel="stylesheet" href="src/css/index.css">
 </head>
 <body>
-    <div id="app">
-        <aside id="sidebar" class="glass-panel">
-            <div class="sidebar-brand">
-                <div class="brand-mark" aria-hidden="true">IT</div>
-                <div class="brand-copy">
-                    <p class="eyebrow">Mesa de soporte</p>
-                    <h2>Soporte Premium</h2>
-                    <p>Contexto operativo, ajustes rápidos y trazabilidad en una sola vista.</p>
-                </div>
-                <button type="button" id="sidebar-collapse-toggle" class="sidebar-collapse-button" aria-label="Colapsar barra lateral" aria-expanded="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <polyline points="15 18 9 12 15 6"></polyline>
-                    </svg>
-                </button>
-            </div>
 
-            <div class="sidebar-content sidebar-card">
+<div id="app">
+    <!-- =============================================
+         SIDEBAR — Command Panel
+         ============================================= -->
+    <aside id="sidebar" role="complementary" aria-label="Panel de control">
+
+        <!-- Brand Header -->
+        <div class="sidebar-brand">
+            <div class="brand-mark" aria-hidden="true">IT</div>
+            <div class="brand-copy">
+                <span class="eyebrow">Enterprise Support</span>
+                <h2>AI IT Support</h2>
+                <p>Soporte instantáneo.</p>
+            </div>
+            <button
+                type="button"
+                id="sidebar-collapse-toggle"
+                class="sidebar-collapse-button"
+                aria-label="Colapsar panel lateral"
+                aria-expanded="true"
+                aria-controls="sidebar"
+            >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Settings Panel -->
+        <div class="sidebar-content">
+            <div class="sidebar-card" id="settings-panel" role="region" aria-label="Configuración de sesión">
+                <!-- Role Selector -->
                 <div class="form-group">
-                    <label for="role-select">Rol de Usuario</label>
-                    <select id="role-select" class="premium-select">
-                        <option value="user">Usuario</option>
-                        <option value="helpdesk">Mesa de ayuda</option>
+                    <label for="role-select">Rol de Sesión</label>
+                    <select id="role-select" class="premium-select" aria-describedby="role-hint">
+                        <option value="user">Usuario Final</option>
+                        <option value="helpdesk">Mesa de Ayuda</option>
                         <option value="admin">Administrador</option>
                     </select>
                 </div>
 
+                <!-- Theme Selector -->
                 <div class="form-group">
-                    <label for="theme-select">Tema de interfaz</label>
+                    <label for="theme-select">Tema de Interfaz</label>
                     <select id="theme-select" class="premium-select">
+                        <option value="dark" selected>Oscuro</option>
                         <option value="light">Claro</option>
-                        <option value="dark">Oscuro</option>
                     </select>
                 </div>
 
+                <!-- Visual Effects Toggle -->
                 <div class="control-toggle">
-                    <label class="toggle">
+                    <label class="toggle" aria-label="Activar efectos visuales">
                         <input type="checkbox" id="theme-toggle" checked>
-                        <span class="slider round"></span>
+                        <span class="slider" aria-hidden="true"></span>
                     </label>
-                    <span class="toggle-label">Efectos visuales avanzados</span>
+                    <span class="toggle-label">Animaciones</span>
                 </div>
             </div>
+        </div>
 
-            <div class="sidebar-footer">
-                <div class="sidebar-status">
-                    <span class="status-dot" aria-hidden="true"></span>
-                    <div>
-                        <strong>Sesión activa</strong>
-                        <p>Respuestas contextualizadas con animaciones suaves.</p>
-                    </div>
+        <!-- Status Footer -->
+        <div class="sidebar-footer">
+            <div class="sidebar-status" role="status" aria-live="polite">
+                <span class="status-dot" aria-hidden="true"></span>
+                <div>
+                    <strong>Sistema Operativo</strong>
+                    <p>Analizando en tiempo real.</p>
                 </div>
             </div>
-        </aside>
+        </div>
 
-        <main id="chat-container">
-            <header class="chat-header">
-                <div class="chat-header-copy">
-                    <p class="eyebrow">Asistente virtual</p>
-                    <h1>IT Support Chatbot</h1>
-                    <p>Asistente virtual para consultas y solicitudes de soporte IT.</p>
-                </div>
-                <div class="chat-status">
-                    <span class="status-pill status-pill--live">En línea</span>
-                    <span class="status-pill" id="current-role-pill">Rol: Usuario</span>
-                    <span class="status-pill status-pill--muted" id="visual-mode-pill">Animación activa</span>
-                </div>
-            </header>
+    </aside>
 
-            <section class="conversation-shell">
-                <div class="conversation-glow" aria-hidden="true"></div>
-                <div id="messages-area" class="messages-area" aria-live="polite"></div>
-            </section>
+    <!-- =============================================
+         MAIN CHAT AREA
+         ============================================= -->
+    <main id="chat-container" role="main">
 
-            <div class="chat-input-area">
-                <form id="chat-form">
-                    <div class="composer-shell">
-                        <input type="text" id="chat-input" placeholder="Escribe tu consulta aquí..." autocomplete="off">
-                        <button type="submit" id="send-button" aria-label="Enviar consulta">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="22" y1="2" x2="11" y2="13"></line>
-                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                            </svg>
-                        </button>
-                    </div>
-                    <p class="composer-hint">Ejemplos rápidos: “No puedo iniciar sesión”, “Buscar ticket 12345”, “Restablecer contraseña de un usuario”.</p>
-                </form>
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="chat-header-copy">
+                <span class="eyebrow">Terminal de Asistencia</span>
+                <h1>Saber es poder</h1>
+                <p>Analizando solicitudes en tiempo real.</p>
             </div>
-        </main>
-    </div>
+            <div class="chat-status" role="status" aria-live="polite">
+                <span class="status-pill status-pill--live" id="connection-status-pill">En línea</span>
+                <span class="status-pill" id="current-role-pill">Rol: Usuario Final</span>
+                <span class="status-pill status-pill--muted" id="visual-mode-pill">Animación activa</span>
+            </div>
+        </header>
 
-    <!-- Main Application Script -->
-    <script src="src/js/api.js"></script>
-    <script src="src/js/main.js"></script>
+        <!-- Conversation Area -->
+        <section class="conversation-shell" aria-label="Conversación">
+            <div class="conversation-glow" aria-hidden="true"></div>
+            <div
+                id="messages-area"
+                class="messages-area"
+                role="log"
+                aria-live="polite"
+                aria-label="Mensajes de la conversación"
+            ></div>
+        </section>
+
+        <!-- Input Composer -->
+        <div class="chat-input-area">
+            <form id="chat-form" novalidate>
+                <div class="composer-shell">
+                    <input
+                        type="text"
+                        id="chat-input"
+                        placeholder="Escribe tu consulta técnica aquí..."
+                        autocomplete="off"
+                        aria-label="Campo de mensaje"
+                        aria-describedby="composer-hint"
+                        maxlength="2000"
+                    >
+                    <button type="submit" id="send-button" aria-label="Enviar consulta">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <p class="composer-hint" id="composer-hint" aria-hidden="true">
+                    Sugerencias: "No puedo iniciar sesión" · "Estado del ticket #1024" · "Reset password de usuario"
+                </p>
+            </form>
+        </div>
+
+    </main>
+</div>
+
+<!-- Application Scripts -->
+<script src="src/js/api.js"></script>
+<script src="src/js/main.js"></script>
 </body>
 </html>

@@ -1,387 +1,390 @@
 /**
- * UI State Management
+ * IT Command Center — Main UI Logic
+ * Handles state, rendering, animations and API communication.
  */
+
+/* =========================================================
+   STATE
+   ========================================================= */
 const ROLE_LABELS = {
-    user: "Usuario",
-    helpdesk: "Mesa de ayuda",
-    admin: "Administrador"
+    user:     "Usuario Final",
+    helpdesk: "Mesa de Ayuda",
+    admin:    "Administrador"
 };
 
 const UIState = {
-    sessionId: crypto.randomUUID(),
-    currentUserRole: 'user',
-    theme: 'light',
-    messages: []
+    sessionId:       crypto.randomUUID(),
+    currentUserRole: "user",
+    theme:           "dark",
+    animationsOn:    true,
+    messages:        []
 };
 
-/**
- * Update the user role in the state
- * @param {string} role 
- */
-function setRole(role) {
-    UIState.currentUserRole = role;
-    syncRoleChip();
-    console.log(`Role updated to: ${role}`);
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+function generateMessageId() {
+    return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-/**
- * Get a human-readable label for a role
- * @param {string} role
- * @returns {string}
- */
+function formatTime(isoString) {
+    return new Date(isoString).toLocaleTimeString("es-ES", {
+        hour:   "2-digit",
+        minute: "2-digit"
+    });
+}
+
 function getRoleLabel(role) {
     return ROLE_LABELS[role] || role;
 }
 
-/**
- * Generate a unique ID for messages
- * @returns {string} pseudo-random ID
- */
-function generateMessageId() {
-    return Math.random().toString(36).substring(2, 9);
+/* =========================================================
+   STATE MUTATIONS
+   ========================================================= */
+function setRole(role) {
+    UIState.currentUserRole = role;
+    syncRolePill();
 }
 
-/**
- * Add a message to the UI state
- * @param {string} role 'user' or 'assistant'
- * @param {string} content Text of the message
- * @param {string|null} actionExecuted Any action executed by the assistant
- * @returns {Object} The message object
- */
-function addMessageToState(role, content, actionExecuted = null) {
+function addMessage(role, content, actionExecuted = null) {
     const msg = {
-        id: generateMessageId(),
-        role: role,
-        content: content,
+        id:              generateMessageId(),
+        role,
+        content,
         action_executed: actionExecuted,
-        createdAt: new Date().toISOString()
+        createdAt:       new Date().toISOString()
     };
     UIState.messages.push(msg);
     return msg;
 }
 
-// Event Listeners for initialization
+/* =========================================================
+   INITIALIZATION
+   ========================================================= */
 document.addEventListener("DOMContentLoaded", () => {
-    initSidebarCollapse();
-    initThemeSelector();
-
-    // Initial role setup
-    const roleSelect = document.getElementById("role-select");
-    if (roleSelect) {
-        roleSelect.addEventListener("change", (e) => {
-            setRole(e.target.value);
-            // Micro-animation effect
-            roleSelect.style.transform = 'scale(0.98)';
-            setTimeout(() => roleSelect.style.transform = 'scale(1)', 150);
-        });
-    }
-
-    const themeToggle = document.getElementById("theme-toggle");
-    if (themeToggle) {
-        document.body.classList.toggle('disable-animations', !themeToggle.checked);
-        themeToggle.addEventListener("change", (e) => {
-            document.body.classList.toggle('disable-animations', !e.target.checked);
-            syncVisualModeChip();
-        });
-    }
-
-    const chatForm = document.getElementById("chat-form");
-    if (chatForm) {
-        chatForm.addEventListener("submit", handleChatSubmit);
-    }
-
-    document.addEventListener("click", (event) => {
-        const promptButton = event.target.closest("[data-prompt]");
-        if (!promptButton) return;
-
-        const inputField = document.getElementById("chat-input");
-        if (!inputField) return;
-
-        inputField.value = promptButton.dataset.prompt || "";
-        inputField.focus();
-        if (typeof inputField.setSelectionRange === "function") {
-            const endPosition = inputField.value.length;
-            inputField.setSelectionRange(endPosition, endPosition);
-        }
-    });
-
-    syncChromeState();
+    initTheme();
+    initSidebar();
+    initControls();
+    syncPills();
     renderMessages();
 });
 
-/**
- * Initialize theme selector and restore persisted preference
- */
-function initThemeSelector() {
+function initTheme() {
     const themeSelect = document.getElementById("theme-select");
-    if (!themeSelect) return;
-
-    const savedTheme = localStorage.getItem("ui-theme");
-    const initialTheme = savedTheme === "dark" ? "dark" : "light";
-
-    applyTheme(initialTheme);
-    themeSelect.value = initialTheme;
-
-    themeSelect.addEventListener("change", (e) => {
-        applyTheme(e.target.value);
-    });
+    const saved = localStorage.getItem("it-cmd-theme") || "dark";
+    applyTheme(saved);
+    if (themeSelect) themeSelect.value = saved;
 }
 
-/**
- * Apply selected theme to the document and persist preference
- * @param {string} theme
- */
 function applyTheme(theme) {
-    const resolvedTheme = theme === "dark" ? "dark" : "light";
-    UIState.theme = resolvedTheme;
-    document.body.setAttribute("data-theme", resolvedTheme);
-    localStorage.setItem("ui-theme", resolvedTheme);
+    const resolved = theme === "light" ? "light" : "dark";
+    UIState.theme = resolved;
+    document.documentElement.setAttribute("data-theme", resolved);
+    document.body.setAttribute("data-theme", resolved);
+    localStorage.setItem("it-cmd-theme", resolved);
 }
 
-/**
- * Enable collapsing sidebar in desktop layouts
- */
-function initSidebarCollapse() {
-    const app = document.getElementById("app");
-    const collapseButton = document.getElementById("sidebar-collapse-toggle");
-    if (!app || !collapseButton) return;
+function initControls() {
+    // Role selector
+    const roleSelect = document.getElementById("role-select");
+    if (roleSelect) {
+        roleSelect.addEventListener("change", e => {
+            setRole(e.target.value);
+            flashBorder(roleSelect);
+        });
+    }
 
-    const setCollapsedState = (isCollapsed) => {
-        app.classList.toggle("sidebar-collapsed", isCollapsed);
-        collapseButton.setAttribute("aria-expanded", String(!isCollapsed));
-        collapseButton.setAttribute("aria-label", isCollapsed ? "Expandir barra lateral" : "Colapsar barra lateral");
-    };
+    // Theme selector
+    const themeSelect = document.getElementById("theme-select");
+    if (themeSelect) {
+        themeSelect.addEventListener("change", e => applyTheme(e.target.value));
+    }
 
-    collapseButton.addEventListener("click", () => {
-        const isCollapsed = app.classList.toggle("sidebar-collapsed");
-        collapseButton.setAttribute("aria-expanded", String(!isCollapsed));
-        collapseButton.setAttribute("aria-label", isCollapsed ? "Expandir barra lateral" : "Colapsar barra lateral");
+    // Animations toggle
+    const animToggle = document.getElementById("theme-toggle");
+    if (animToggle) {
+        animToggle.addEventListener("change", e => {
+            UIState.animationsOn = e.target.checked;
+            document.body.classList.toggle("disable-animations", !e.target.checked);
+            syncVisualPill();
+        });
+    }
+
+    // Chat form
+    const chatForm = document.getElementById("chat-form");
+    if (chatForm) chatForm.addEventListener("submit", handleChatSubmit);
+
+    // Quick prompt chips (delegated)
+    document.addEventListener("click", e => {
+        const chip = e.target.closest("[data-prompt]");
+        if (!chip) return;
+        const input = document.getElementById("chat-input");
+        if (!input) return;
+        input.value = chip.dataset.prompt || "";
+        input.focus();
+        const end = input.value.length;
+        input.setSelectionRange(end, end);
+        chip.style.transform = "scale(0.98)";
+        setTimeout(() => { chip.style.transform = ""; }, 120);
     });
-
-    setCollapsedState(false);
 }
 
-/**
- * Synchronize header chips with current UI state
- */
-function syncChromeState() {
-    syncRoleChip();
-    syncVisualModeChip();
+function initSidebar() {
+    const app      = document.getElementById("app");
+    const toggle   = document.getElementById("sidebar-collapse-toggle");
+    if (!app || !toggle) return;
+
+    toggle.addEventListener("click", () => {
+        const collapsed = app.classList.toggle("sidebar-collapsed");
+        toggle.setAttribute("aria-expanded", String(!collapsed));
+        toggle.setAttribute("aria-label", collapsed ? "Expandir panel lateral" : "Colapsar panel lateral");
+    });
 }
 
-/**
- * Update the role chip in the header
- */
-function syncRoleChip() {
-    const roleChip = document.getElementById("current-role-pill");
-    if (roleChip) {
-        roleChip.textContent = `Rol: ${getRoleLabel(UIState.currentUserRole)}`;
-    }
+/* =========================================================
+   UI SYNC
+   ========================================================= */
+function syncPills() {
+    syncRolePill();
+    syncVisualPill();
 }
 
-/**
- * Update the visual mode chip in the header
- */
-function syncVisualModeChip() {
-    const visualChip = document.getElementById("visual-mode-pill");
-    const animationsDisabled = document.body.classList.contains('disable-animations');
-
-    if (visualChip) {
-        visualChip.textContent = animationsDisabled ? "Animaciones pausadas" : "Animación activa";
-        visualChip.classList.toggle("status-pill--muted", animationsDisabled);
-    }
+function syncRolePill() {
+    const pill = document.getElementById("current-role-pill");
+    if (pill) pill.textContent = `Rol: ${getRoleLabel(UIState.currentUserRole)}`;
 }
 
-/**
- * Handle form submission
- * @param {Event} e 
- */
+function syncVisualPill() {
+    const pill = document.getElementById("visual-mode-pill");
+    if (!pill) return;
+    const off = document.body.classList.contains("disable-animations");
+    pill.textContent = off ? "Animaciones pausadas" : "Animación activa";
+}
+
+function syncConnectionStatus(status) {
+    const pill = document.getElementById("connection-status-pill");
+    if (!pill) return;
+    const map = {
+        online:    { text: "En línea",      cls: "status-pill--live"    },
+        thinking:  { text: "Procesando...", cls: "status-pill--thinking" },
+        error:     { text: "Error",         cls: "status-pill--error"   }
+    };
+    const cfg = map[status] || map.online;
+    pill.className = `status-pill status-pill--live`;
+    if (status !== "online") pill.classList.remove("status-pill--live");
+    pill.textContent = cfg.text;
+}
+
+/* =========================================================
+   MICRO-INTERACTIONS
+   ========================================================= */
+function flashBorder(el) {
+    el.style.borderColor = "var(--pantone-219c)";
+    el.style.boxShadow   = "0 0 0 3px var(--pantone-219c-soft)";
+    setTimeout(() => {
+        el.style.borderColor = "";
+        el.style.boxShadow   = "";
+    }, 400);
+}
+
+/* =========================================================
+   CHAT SUBMIT
+   ========================================================= */
 async function handleChatSubmit(e) {
     e.preventDefault();
-    
-    const inputField = document.getElementById("chat-input");
-    const text = inputField.value.trim();
-    
-    if (!text) return;
-    
-    // Clear input
-    inputField.value = "";
-    
-    // Add user message to state and UI
-    addMessageToState("user", text);
-    renderMessages();
-    
-    // Show typing indicator
-    showTypingIndicator();
-    
-    try {
-        const response = await ApiClient.askQuestion(text, UIState.sessionId, UIState.currentUserRole);
-        
-        // Remove typing indicator
-        removeTypingIndicator();
-        
-        // Add assistant message
-        const answer = response.answer || "No response";
-        const action = response.action_executed || null;
-        
-        addMessageToState("assistant", answer, action);
-        renderMessages();
-        
-    } catch (error) {
-        removeTypingIndicator();
-        addMessageToState("assistant", `Error: ${error.message}`);
-        renderMessages();
-    }
 
-    inputField.focus();
+    const input = document.getElementById("chat-input");
+    const text  = input?.value.trim();
+    if (!text) return;
+
+    input.value = "";
+    addMessage("user", text);
+    renderMessages();
+    showTypingIndicator();
+    syncConnectionStatus("thinking");
+
+    const sendBtn = document.getElementById("send-button");
+    if (sendBtn) sendBtn.disabled = true;
+
+    try {
+        const res    = await ApiClient.askQuestion(text, UIState.sessionId, UIState.currentUserRole);
+        removeTypingIndicator();
+        syncConnectionStatus("online");
+
+        const answer = res.answer        || "No se recibió respuesta.";
+        const action = res.action_executed || null;
+        addMessage("assistant", answer, action);
+        renderMessages();
+
+    } catch (err) {
+        removeTypingIndicator();
+        syncConnectionStatus("error");
+        addMessage("assistant", `⚠ Error de sistema: ${err.message}`);
+        renderMessages();
+
+    } finally {
+        if (sendBtn) sendBtn.disabled = false;
+        input?.focus();
+    }
 }
 
-/**
- * Render all messages from state to DOM
- */
+/* =========================================================
+   RENDERING
+   ========================================================= */
 function renderMessages() {
-    const messagesArea = document.getElementById("messages-area");
-    if (!messagesArea) return;
-    
-    messagesArea.innerHTML = "";
-    messagesArea.classList.toggle("messages-area--empty", UIState.messages.length === 0);
+    const area = document.getElementById("messages-area");
+    if (!area) return;
+
+    area.innerHTML = "";
+    area.classList.toggle("messages-area--empty", UIState.messages.length === 0);
 
     if (UIState.messages.length === 0) {
-        renderEmptyState(messagesArea);
+        renderWelcome(area);
         return;
     }
-    
-    UIState.messages.forEach(msg => {
-        const row = document.createElement("article");
-        row.className = `message message-row ${msg.role}`;
 
-        const avatar = document.createElement("div");
-        avatar.className = `message-avatar ${msg.role}`;
-        avatar.textContent = msg.role === "user" ? "TU" : "AI";
-
-        const bubble = document.createElement("div");
-        bubble.className = `message-bubble ${msg.role}`;
-
-        const meta = document.createElement("div");
-        meta.className = "message-meta";
-
-        const roleLabel = document.createElement("span");
-        roleLabel.className = "message-role";
-        roleLabel.textContent = msg.role === "user" ? "Tú" : "Asistente";
-
-        const timeLabel = document.createElement("time");
-        timeLabel.className = "message-time";
-        timeLabel.dateTime = msg.createdAt;
-        timeLabel.textContent = formatMessageTime(msg.createdAt);
-
-        meta.append(roleLabel, timeLabel);
-
-        const content = document.createElement("div");
-        content.className = "message-content";
-        content.textContent = msg.content.trim();
-
-        bubble.append(meta, content);
-
-        if (msg.action_executed) {
-            const footer = document.createElement("div");
-            footer.className = "message-footer";
-
-            const actionBadge = document.createElement("span");
-            actionBadge.className = "action-badge";
-            actionBadge.textContent = `Acción: ${msg.action_executed}`;
-
-            footer.append(actionBadge);
-            bubble.append(footer);
+    UIState.messages.forEach((msg, index) => {
+        const row = buildMessageRow(msg);
+        area.appendChild(row);
+        // Staggered entrance
+        if (UIState.animationsOn) {
+            const delay = Math.min(index * 40, 200);
+            row.style.animationDelay = `${delay}ms`;
         }
-
-        row.append(avatar, bubble);
-        messagesArea.appendChild(row);
     });
-    
+
     scrollToBottom();
 }
 
-/**
- * Render the initial empty state with quick prompts
- * @param {HTMLElement} messagesArea
- */
-function renderEmptyState(messagesArea) {
-    const welcomeState = document.createElement("section");
-    welcomeState.className = "welcome-state";
-    welcomeState.innerHTML = `
-        <div class="welcome-state__icon" aria-hidden="true">✦</div>
-        <p class="welcome-state__eyebrow">Inicio rápido</p>
-        <h2>¿Qué necesitás resolver hoy?</h2>
-        <p class="welcome-state__copy">Elegí un acceso rápido o escribí tu consulta. El panel lateral ajusta el contexto de respuesta según el rol.</p>
-        <div class="prompt-grid">
-            <button type="button" class="prompt-chip" data-prompt="No puedo iniciar sesión en Jira.">No puedo iniciar sesión</button>
-            <button type="button" class="prompt-chip" data-prompt="Necesito buscar un ticket por número.">Buscar un ticket</button>
-            <button type="button" class="prompt-chip" data-prompt="Necesito documentación sobre un proceso de soporte.">Ver documentación</button>
-            <button type="button" class="prompt-chip" data-prompt="Restablecer contraseña de un usuario.">Restablecer contraseña</button>
-        </div>
-    `;
+function buildMessageRow(msg) {
+    const row = document.createElement("article");
+    row.className = `message message-row ${msg.role}`;
+    row.setAttribute("data-message-id", msg.id);
 
-    messagesArea.appendChild(welcomeState);
+    // Avatar
+    const avatar = document.createElement("div");
+    avatar.className = `message-avatar ${msg.role}`;
+    avatar.setAttribute("aria-hidden", "true");
+    avatar.textContent = msg.role === "user" ? "TÚ" : "AI";
+
+    // Bubble
+    const bubble = document.createElement("div");
+    bubble.className = `message-bubble ${msg.role}`;
+
+    // Meta line
+    const meta = document.createElement("div");
+    meta.className = "message-meta";
+
+    const role = document.createElement("span");
+    role.className = "message-role";
+    role.textContent = msg.role === "user" ? "Tú" : "Asistente";
+
+    const time = document.createElement("time");
+    time.className = "message-time";
+    time.dateTime  = msg.createdAt;
+    time.textContent = formatTime(msg.createdAt);
+
+    meta.append(role, time);
+
+    // Content
+    const content = document.createElement("div");
+    content.className = "message-content";
+    content.textContent = msg.content.trim();
+
+    bubble.append(meta, content);
+
+    // Action badge
+    if (msg.action_executed) {
+        const footer = document.createElement("div");
+        footer.className = "message-footer";
+
+        const badge = document.createElement("span");
+        badge.className = "action-badge";
+        badge.textContent = `⚡ ${msg.action_executed}`;
+
+        footer.append(badge);
+        bubble.append(footer);
+    }
+
+    row.append(avatar, bubble);
+    return row;
 }
 
-/**
- * Show typing indicator
- */
+function renderWelcome(area) {
+    const welcome = document.createElement("section");
+    welcome.className = "welcome-state";
+    welcome.setAttribute("aria-label", "Pantalla de bienvenida");
+    welcome.innerHTML = `
+        <div class="welcome-state__icon" aria-hidden="true">✦</div>
+        <p class="welcome-state__eyebrow">Inicio de sesión</p>
+        <h2>¿Qué necesitás resolver?</h2>
+        <p class="welcome-state__copy">
+            Analizando solicitudes en tiempo real. Selecciona un acceso rápido o describe tu duda.
+        </p>
+        <div class="prompt-grid" role="list">
+            <button type="button" class="prompt-chip" role="listitem"
+                data-prompt="No puedo iniciar sesión en el sistema."
+                aria-label="Consulta rápida: No puedo iniciar sesión">
+                No puedo iniciar sesión
+            </button>
+            <button type="button" class="prompt-chip" role="listitem"
+                data-prompt="Necesito el estado del ticket #1024."
+                aria-label="Consulta rápida: Buscar estado de un ticket">
+                Estado de ticket
+            </button>
+            <button type="button" class="prompt-chip" role="listitem"
+                data-prompt="Necesito documentación sobre el proceso de onboarding."
+                aria-label="Consulta rápida: Ver documentación técnica">
+                Documentación técnica
+            </button>
+            <button type="button" class="prompt-chip" role="listitem"
+                data-prompt="Necesito restablecer la contraseña de un usuario."
+                aria-label="Consulta rápida: Restablecer contraseña">
+                Restablecer contraseña
+            </button>
+        </div>
+    `;
+    area.appendChild(welcome);
+}
+
+/* =========================================================
+   TYPING INDICATOR
+   ========================================================= */
 function showTypingIndicator() {
-    const messagesArea = document.getElementById("messages-area");
-    if (!messagesArea) return;
-    
-    removeTypingIndicator(); // Ensure no duplicates
-    
-    const div = document.createElement("article");
-    div.className = "typing-indicator";
-    div.id = "typing-indicator";
-    
-    div.innerHTML = `
-        <div class="message-avatar assistant">AI</div>
+    const area = document.getElementById("messages-area");
+    if (!area) return;
+    removeTypingIndicator();
+
+    const indicator = document.createElement("article");
+    indicator.id = "typing-indicator";
+    indicator.className = "typing-indicator";
+    indicator.setAttribute("aria-label", "El asistente está generando una respuesta");
+    indicator.innerHTML = `
+        <div class="message-avatar assistant" aria-hidden="true">AI</div>
         <div class="typing-bubble">
             <span class="typing-label">Generando respuesta</span>
-            <div class="typing-dots">
+            <div class="typing-dots" aria-hidden="true">
                 <div class="typing-dot"></div>
                 <div class="typing-dot"></div>
                 <div class="typing-dot"></div>
             </div>
         </div>
     `;
-    
-    messagesArea.appendChild(div);
+
+    area.appendChild(indicator);
     scrollToBottom();
 }
 
-/**
- * Remove typing indicator
- */
 function removeTypingIndicator() {
-    const indicator = document.getElementById("typing-indicator");
-    if (indicator) {
-        indicator.parentElement.removeChild(indicator);
-    }
+    document.getElementById("typing-indicator")?.remove();
 }
 
-/**
- * Scroll message area to bottom
- */
+/* =========================================================
+   SCROLL
+   ========================================================= */
 function scrollToBottom() {
-    const messagesArea = document.getElementById("messages-area");
-    if (messagesArea) {
-        messagesArea.scrollTop = messagesArea.scrollHeight;
+    const area = document.getElementById("messages-area");
+    if (area) {
+        area.scrollTo({ top: area.scrollHeight, behavior: "smooth" });
     }
-}
-
-/**
- * Format a message timestamp for display
- * @param {string} createdAt
- * @returns {string}
- */
-function formatMessageTime(createdAt) {
-    const date = new Date(createdAt);
-    return date.toLocaleTimeString("es-ES", {
-        hour: "2-digit",
-        minute: "2-digit"
-    });
 }
